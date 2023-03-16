@@ -1,0 +1,52 @@
+version: "3.7"
+
+services:
+  nextcloud:
+    container_name: nextcloud
+    image: nextcloud:${NEXTCLOUD_VERSION}
+    environment:
+      # nextcloud
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      # works only if volume doesn't exit 
+      - NEXTCLOUD_TRUSTED_DOMAINS=${INSTANCE_PUBLIC_IP}
+      # db
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_HOST=db
+    ports:
+      - "80:80"
+    volumes:
+      - nextcloud:/var/www/html
+      # - apps:/var/www/html/custom_apps
+      # - config:/var/www/html/config
+      # - data:/var/www/html/data
+      # - theme:/var/www/html/themes/<YOUR_CUSTOM_THEME>
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    container_name: postgres
+    image: postgres:${POSTGRES_VERSION}
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U nextcloud -d nextcloud_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  nextcloud:
+  db_data:
